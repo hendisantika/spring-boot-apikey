@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDateTime
 
 /**
  * Created by IntelliJ IDEA.
@@ -39,6 +40,14 @@ class ApiKeyController(private val apiKeyService: ApiKeyService) {
 
     data class CreateApiKeyRequest(
         val name: String,
+        val role: ApiKeyRole,
+        val rateLimit: Int
+    )
+
+    data class ApiKeyResponse(
+        val key: String,
+        val name: String,
+        val expiresAt: LocalDateTime,
         val role: ApiKeyRole,
         val rateLimit: Int
     )
