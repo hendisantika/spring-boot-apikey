@@ -1,5 +1,6 @@
 package id.my.hendisantika.apikey.controller
 
+import id.my.hendisantika.apikey.entity.ApiKeyRole
 import id.my.hendisantika.apikey.service.ApiKeyService
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -35,4 +36,10 @@ class ApiKeyController(private val apiKeyService: ApiKeyService) {
             rateLimit = apiKey.rateLimit
         )
     }
+
+    data class CreateApiKeyRequest(
+        val name: String,
+        val role: ApiKeyRole,
+        val rateLimit: Int
+    )
 }
