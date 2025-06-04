@@ -2,7 +2,10 @@ package id.my.hendisantika.apikey.service
 
 import id.my.hendisantika.apikey.entity.ApiKey
 import id.my.hendisantika.apikey.entity.ApiKeyRole
+import id.my.hendisantika.apikey.exception.InvalidApiKeyException
+import id.my.hendisantika.apikey.exception.RateLimitExceededException
 import id.my.hendisantika.apikey.repository.ApiKeyRepository
+import id.my.hendisantika.apikey.security.ApiKeyAuthentication
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.stereotype.Service
@@ -11,7 +14,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class ApiKeyService(private val apiKeyRepository: ApiKeyRepository) {
-    private val rateLimiters = ConcurrentHashMap<String, Bucket>()
+    // Simple rate limiter: key -> (count, reset time)
+    private val rateLimiters = ConcurrentHashMap<String, Pair<Int, LocalDateTime>>()
+
+    fun getAllApiKeys(): List<ApiKey> {
+        return apiKeyRepository.findAll()
+    }
+
+    fun getApiKeyByKey(key: String): ApiKey? {
+        return apiKeyRepository.findByKey(key)
+    }
 
     fun validateKey(key: String): Authentication {
         val apiKey = apiKeyRepository.findByKey(key)
@@ -26,14 +38,18 @@ class ApiKeyService(private val apiKeyRepository: ApiKeyRepository) {
         }
 
         // Check rate limit
-        val bucket = rateLimiters.computeIfAbsent(key) { k ->
-            Bucket4j.builder()
-                .addLimit(Bandwidth.classic(apiKey.rateLimit, Refill.intervally(apiKey.rateLimit, Duration.ofHours(1))))
-                .build()
-        }
-
-        if (!bucket.tryConsume(1)) {
-            throw RateLimitExceededException("Rate limit exceeded")
+        val now = LocalDateTime.now()
+        rateLimiters.compute(key) { _, value ->
+            if (value == null || value.second.isBefore(now)) {
+                // First request or reset time has passed
+                Pair(1, now.plusHours(1))
+            } else if (value.first >= apiKey.rateLimit) {
+                // Rate limit exceeded
+                throw RateLimitExceededException("Rate limit exceeded")
+            } else {
+                // Increment count
+                Pair(value.first + 1, value.second)
+            }
         }
 
         // Create authentication token
