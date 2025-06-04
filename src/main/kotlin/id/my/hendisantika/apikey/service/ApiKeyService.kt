@@ -1,5 +1,7 @@
 package id.my.hendisantika.apikey.service
 
+import id.my.hendisantika.apikey.entity.ApiKey
+import id.my.hendisantika.apikey.entity.ApiKeyRole
 import id.my.hendisantika.apikey.repository.ApiKeyRepository
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -37,5 +39,15 @@ class ApiKeyService(private val apiKeyRepository: ApiKeyRepository) {
         // Create authentication token
         val authorities = listOf(SimpleGrantedAuthority(apiKey.role.name))
         return ApiKeyAuthentication(key, authorities)
+    }
+
+    fun createApiKey(name: String, role: ApiKeyRole, rateLimit: Int): ApiKey {
+        val apiKey = ApiKey(
+            name = name,
+            role = role,
+            rateLimit = rateLimit,
+            expiresAt = LocalDateTime.now().plusYears(1)
+        )
+        return apiKeyRepository.save(apiKey)
     }
 }
