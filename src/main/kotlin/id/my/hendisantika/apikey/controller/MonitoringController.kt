@@ -1,6 +1,7 @@
 package id.my.hendisantika.apikey.controller
 
 import id.my.hendisantika.apikey.repository.ApiKeyRepository
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
