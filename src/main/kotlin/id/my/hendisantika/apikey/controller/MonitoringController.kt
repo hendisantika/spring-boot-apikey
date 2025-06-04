@@ -1,6 +1,7 @@
 package id.my.hendisantika.apikey.controller
 
 import id.my.hendisantika.apikey.repository.ApiKeyRepository
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -20,4 +21,20 @@ import org.springframework.web.bind.annotation.RestController
 class MonitoringController(
     private val apiKeyRepository: ApiKeyRepository,
     private val meterRegistry: MeterRegistry
-)
+) {
+    @GetMapping("/api-keys/usage")
+    fun getApiKeyUsage(): List<ApiKeyUsage> {
+        return apiKeyRepository.findAll().map { apiKey ->
+            val requests = meterRegistry.get("api.requests")
+                .tag("apiKey", apiKey.key)
+                .counter()
+                .count()
+
+            ApiKeyUsage(
+                name = apiKey.name,
+                requests = requests.toLong(),
+                rateLimit = apiKey.rateLimit
+            )
+        }
+    }
+}
