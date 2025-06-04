@@ -37,4 +37,10 @@ class MonitoringController(
             )
         }
     }
+
+    data class ApiKeyUsage(
+        val name: String,
+        val requests: Long,
+        val rateLimit: Int
+    )
 }
