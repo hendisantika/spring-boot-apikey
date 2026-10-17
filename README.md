@@ -1,5 +1,7 @@
 # Spring Boot API Key Authentication
 
+[![Java CI with Gradle](https://github.com/hendisantika/spring-boot-apikey/actions/workflows/gradle.yml/badge.svg)](https://github.com/hendisantika/spring-boot-apikey/actions/workflows/gradle.yml)
+
 This project demonstrates how to implement API key authentication in a Spring Boot application. It includes features
 like rate limiting, role-based access control, and API key management.
 
@@ -13,10 +15,18 @@ like rate limiting, role-based access control, and API key management.
 - Metrics for monitoring API usage
 - Comprehensive test coverage
 
+## Tech Stack
+
+- Java 25 (Gradle toolchain)
+- Kotlin 2.3
+- Spring Boot 4.1 (Spring Security 7)
+- Gradle 9.3 (via the included wrapper)
+- H2 in-memory database
+
 ## Prerequisites
 
-- Java 21 or higher
-- Gradle
+- JDK 25 (the Gradle toolchain targets Java 25)
+- No separate Gradle install needed: use the included `./gradlew` wrapper
 
 ## Getting Started
 
@@ -97,6 +107,15 @@ To create a new API key, send a POST request to `/admin/api-keys` with the follo
 ```bash
 ./gradlew test
 ```
+
+Controller tests use `@WebMvcTest` (from `spring-boot-webmvc-test`), import `SecurityConfig`, and authenticate
+through the real `ApiKeyAuthFilter` by sending an `X-API-Key` header with a mocked `ApiKeyService` (`@MockitoBean`).
+
+## Continuous Integration
+
+GitHub Actions ([`.github/workflows/gradle.yml`](.github/workflows/gradle.yml)) builds and tests the project on
+Temurin JDK 25 for every push and pull request to `main`. A second job submits the Gradle dependency graph; it is
+set to continue on failure because the dependency graph is currently disabled in the repository settings.
 
 ## API Examples with curl
 
