@@ -3,27 +3,32 @@ package id.my.hendisantika.apikey.controller
 import id.my.hendisantika.apikey.entity.ApiKey
 import id.my.hendisantika.apikey.entity.ApiKeyRole
 import id.my.hendisantika.apikey.security.ApiKeyAuthentication
+import id.my.hendisantika.apikey.security.SecurityConfig
 import id.my.hendisantika.apikey.service.ApiKeyService
+import jakarta.servlet.ServletException
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 @WebMvcTest(UserApiKeyController::class)
+@Import(SecurityConfig::class)
 class UserApiKeyControllerTest {
 
     @Autowired
     private lateinit var mockMvc: MockMvc
 
-    @MockBean
+    @MockitoBean
     private lateinit var apiKeyService: ApiKeyService
 
     @Test
@@ -41,10 +46,11 @@ class UserApiKeyControllerTest {
         val authorities = listOf(SimpleGrantedAuthority("ROLE_CLIENT"))
         val authentication = ApiKeyAuthentication("user-key", authorities)
 
+        `when`(apiKeyService.validateKey("user-key")).thenReturn(authentication)
         `when`(apiKeyService.getApiKeyByKey("user-key")).thenReturn(apiKey)
 
         // Act & Assert
-        mockMvc.perform(get("/api-keys").with(authentication(authentication)))
+        mockMvc.perform(get("/api-keys").header("X-API-Key", "user-key"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.key").value("user-key"))
             .andExpect(jsonPath("$.name").value("User Key"))
@@ -58,10 +64,14 @@ class UserApiKeyControllerTest {
         val authorities = listOf(SimpleGrantedAuthority("ROLE_CLIENT"))
         val authentication = ApiKeyAuthentication("non-existent-key", authorities)
 
+        `when`(apiKeyService.validateKey("non-existent-key")).thenReturn(authentication)
         `when`(apiKeyService.getApiKeyByKey("non-existent-key")).thenReturn(null)
 
         // Act & Assert
-        mockMvc.perform(get("/api-keys").with(authentication(authentication)))
-            .andExpect(status().isInternalServerError) // Since we throw IllegalStateException
+        // MockMvc does not render error pages, so the IllegalStateException propagates
+        val exception = assertFailsWith<ServletException> {
+            mockMvc.perform(get("/api-keys").header("X-API-Key", "non-existent-key"))
+        }
+        assertIs<IllegalStateException>(exception.cause)
     }
 }

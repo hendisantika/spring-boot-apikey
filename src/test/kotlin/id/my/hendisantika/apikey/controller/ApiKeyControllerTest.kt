@@ -2,13 +2,16 @@ package id.my.hendisantika.apikey.controller
 
 import id.my.hendisantika.apikey.entity.ApiKey
 import id.my.hendisantika.apikey.entity.ApiKeyRole
+import id.my.hendisantika.apikey.security.ApiKeyAuthentication
+import id.my.hendisantika.apikey.security.SecurityConfig
 import id.my.hendisantika.apikey.service.ApiKeyService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.annotation.Import
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -16,18 +19,21 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
 
 @WebMvcTest(ApiKeyController::class)
+@Import(SecurityConfig::class)
 class ApiKeyControllerTest {
 
     @Autowired
     private lateinit var mockMvc: MockMvc
 
-    @MockBean
+    @MockitoBean
     private lateinit var apiKeyService: ApiKeyService
 
     @Test
-    @WithMockUser(roles = ["ADMIN"])
     fun `getAllApiKeys should return all API keys for admin users`() {
         // Arrange
+        `when`(apiKeyService.validateKey("admin-key"))
+            .thenReturn(ApiKeyAuthentication("admin-key", listOf(SimpleGrantedAuthority("ROLE_ADMIN"))))
+
         val now = LocalDateTime.now()
         val apiKey1 = ApiKey(
             key = "key-1",
@@ -50,7 +56,7 @@ class ApiKeyControllerTest {
         `when`(apiKeyService.getAllApiKeys()).thenReturn(listOf(apiKey1, apiKey2))
 
         // Act & Assert
-        mockMvc.perform(get("/admin/api-keys"))
+        mockMvc.perform(get("/admin/api-keys").header("X-API-Key", "admin-key"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].key").value("key-1"))
             .andExpect(jsonPath("$[0].name").value("Key 1"))
@@ -63,10 +69,13 @@ class ApiKeyControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = ["CLIENT"])
     fun `getAllApiKeys should return forbidden for non-admin users`() {
+        // Arrange
+        `when`(apiKeyService.validateKey("client-key"))
+            .thenReturn(ApiKeyAuthentication("client-key", listOf(SimpleGrantedAuthority("ROLE_CLIENT"))))
+
         // Act & Assert
-        mockMvc.perform(get("/admin/api-keys"))
+        mockMvc.perform(get("/admin/api-keys").header("X-API-Key", "client-key"))
             .andExpect(status().isForbidden)
     }
 }
