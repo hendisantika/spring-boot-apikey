@@ -26,7 +26,8 @@ class UserApiKeyController(private val apiKeyService: ApiKeyService) {
     @GetMapping
     fun getCurrentUserApiKey(): ApiKeyResponse {
         val authentication = SecurityContextHolder.getContext().authentication
-        val apiKey = authentication.credentials.toString()
+        val apiKey = authentication?.credentials?.toString()
+            ?: throw IllegalStateException("No authenticated API key")
 
         val apiKeyEntity = apiKeyService.getApiKeyByKey(apiKey)
             ?: throw IllegalStateException("API key not found")
